@@ -7,7 +7,10 @@ The Current Query: (This is currently non-deterministic as it lacks a fixed sort
 
 <table style="background-color: #f4f4f4; border: 1px solid #cccccc; width: 100%;"> <tr> <td style="padding: 15px;"> <pre style="font-family: Consolas, 'Courier New', monospace; margin: 0; font-size: 13px;"> SELECT TOP 100 Id, CAST(CourierId as nvarchar(50)), Device, DepartedDateTime = CONVERT(nvarchar(23), [DepartedDateTime], 121), CompletionDateTime = CONVERT(nvarchar(23), [CompletionDateTime], 121) FROM [sm].[ExtractCourierRound] WHERE RoundCompleted=1 AND StopsItemsLoaded=0 AND id % 4 = 0 <b style="color: #d9534f;">-- Missing ORDER BY clause</b> </pre> </td> </tr> </table>
 
-Technical Concern: Without an ORDER BY clause, TOP 100 is non-deterministic. SQL Server returns records based on the physical storage or index scan path, which differs between the New and Old servers. Consequently, the two environments are likely processing different subsets of 100 records, creating a "moving target" for our investigation.
+Technical Context & Concern: Currently, the package uses four parallel tasks to process data, each using a modulo filter (id % 4 = 0, 1, 2, 3) for distribution.
+
+However, because each query lacks an ORDER BY clause, the TOP 100 selection remains non-deterministic. SQL Server may return different subsets of records on different servers based on physical data distribution. This means the four tasks on the New server might be processing a completely different data range compared to the Old server, which is likely the primary cause of the inconsistent results we are seeing.
+
 
 Proposed Solution: I suggest standardizing the query in both environments to establish a consistent baseline:
 
