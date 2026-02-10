@@ -1,26 +1,32 @@
-Technical Analysis: Data Inconsistency Investigation
-1. Current Observation (現狀觀察)
-We are currently experiencing inconsistent results between the New and Old server environments, specifically regarding "missing data" in the final output. I have been reverse-engineering the SSIS package logic and identified a potential vulnerability in the initial Data Input Source.
+Subject: Investigation into Data Inconsistency - Proposed SQL logic update
+Hi [Team/Manager Name],
 
-2. Identified Issue: Non-deterministic Data Sampling (發現的問題)
-The SQL query in the first task uses SELECT TOP 100 coupled with a modulo filter (id % 4), but it lacks an ORDER BY clause.
+I am currently investigating the data inconsistency issue between the New and Old server environments. During my reverse-engineering of the SSIS package, I identified a potential logic gap in the initial Data Input Source that we should address.
 
-Technical Risk: In SQL Server, without an ORDER BY clause, the TOP records returned are non-deterministic. They are determined by the physical storage order, index fragmentation, or the execution plan chosen by that specific server.
+The Current SQL Logic: The source query currently fetches data using a modulo filter but lacks an explicit sort order:
 
-The Problem: Because the New and Old servers have different physical environments, they are likely fetching two different sets of 100 records. This means our comparison is not "apples to apples" from the very first step.
+/* Current Query */
+SELECT TOP 100 Id, CourierId, Device, DepartedDateTime, CompletionDateTime
+FROM [sm].[ExtractCourierRound]
+WHERE RoundCompleted=1 AND StopsItemsLoaded=0 AND id % 4 = 0
+-- Missing ORDER BY clause
 
-3. Proposed Strategy: Establishing a Baseline (建議方案)
-I cannot confirm yet if this is the sole root cause of the data missing issue, but it is a critical variable that must be eliminated to proceed with the investigation.
+The Problem: Without an ORDER BY clause, TOP 100 is non-deterministic. This means SQL Server returns records based on their physical storage or index scan path. Since the physical environments of the New and Old servers are different, they are likely processing different subsets of data, even if the underlying database content is identical. This is likely a major contributor to the "missing data" we are seeing.
 
-I propose to:
+Proposed Solution: I suggest standardizing the query in both environments to establish a reliable baseline for comparison:
 
-Add a consistent ORDER BY Id ASC to the SQL query in both the New and Old environments.
+/* Proposed Updated Query */
+SELECT TOP 100 Id, CourierId, Device, DepartedDateTime, CompletionDateTime
+FROM [sm].[ExtractCourierRound]
+WHERE RoundCompleted=1 AND StopsItemsLoaded=0 AND id % 4 = 0
+ORDER BY Id ASC  -- Ensuring consistent data selection across servers
 
-By doing this, we force both servers to process the exact same records (assuming the underlying data is synchronized).
+Next Steps: While I cannot yet confirm if this is the sole cause of the discrepancy, implementing this change will eliminate a significant variable. It will allow us to confirm whether the issue lies in the data migration itself or the transformation logic.
 
-Once the "selection randomness" is removed, we can accurately determine if the discrepancy lies in the Data Content (migration issues) or the Transformation Logic.
+The performance impact is negligible as Id is an indexed field, and we are only sorting the TOP 100 records.
 
-4. Risk & Impact Assessment (風險評估)
-Performance: Negligible. Since Id is a key field, sorting 100 rows is extremely fast and will not impact system performance.
+Please let me know your thoughts on applying this update to both environments so I can proceed with the next stage of the investigation.
 
-Stability: This change will make the SSIS package more robust and its behavior more predictable across different environments.
+Best regards,
+
+[Your Name]
