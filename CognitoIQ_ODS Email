@@ -1,0 +1,25 @@
+Subject: Discussion regarding the data discrepancy in CognitoIQ_ODS Package testing
+
+Hi [Colleague's Name],
+
+I’m currently working on the CognitoIQ_ODS Package deployment and would like to get your technical input on a challenge I've encountered regarding data reconciliation.
+
+Current Status: I have compared the STG TABLE (staging) results between the Old and New Servers using the same SQL conditions. The data in the STG tables is consistent across both environments.
+
+The Issue: However, there is a discrepancy in the final PRD TABLE results between the two servers. Even though both are running the same version of the SSIS package, the PRD data differs. This could be due to:
+
+Different ETL execution timestamps.
+
+Upstream data changes during the process.
+
+Other environmental factors.
+
+My Concern: If I deploy my updated SSIS package to the New Server for testing now, any further discrepancies in the PRD table will be impossible to debug. I won't be able to distinguish whether the differences are caused by my new logic or if they are just the existing environmental gaps we're already seeing.
+
+Even though I can prove the STG data is identical, I cannot guarantee the PRD table will match, which makes the UAT (User Acceptance Testing) very difficult to sign off.
+
+Request for Advice: How should we proceed with the validation? Should we attempt to "freeze" a snapshot of the source data for a parallel run, or should we accept a certain margin of error in the PRD table as long as the STG data remains consistent?
+
+I'd love to hear your thoughts on this.
+
+Best regards, [Your Name]
